@@ -95,7 +95,7 @@ sub ShowLinkScreen(facade) as Integer
   else
     screen.SetRegistrationCode("Failed to get code...")
   end if
- 
+
   screen.Show()
   current = dt.AsSeconds()+300
 
@@ -171,16 +171,16 @@ function RunLandingScreen(facade) as Integer
 
   landing_items = CreateObject("roArray", 3, true)
   landing_items[0] = {
-                      Title: "Your Files", 
-                      HDSmallIconUrl: "pkg:/images/your-files.png", 
+                      Title: "Your Files",
+                      HDSmallIconUrl: "pkg:/images/your-files.png",
                     }
   landing_items[1] = {
-                      Title: "Search", 
-                      HDSmallIconUrl: "pkg:/images/search.png", 
+                      Title: "Search",
+                      HDSmallIconUrl: "pkg:/images/search.png",
                     }
   landing_items[2] = {
-                      Title: "Settings", 
-                      HDSmallIconUrl: "pkg:/images/settings.png", 
+                      Title: "Settings",
+                      HDSmallIconUrl: "pkg:/images/settings.png",
                     }
   screen.SetContent(landing_items)
   screen.Show()
@@ -218,18 +218,18 @@ function Settings() as Integer
 
   items = CreateObject("roArray", 3, true)
   items[0] = {
-      Title: "Unlink this device", 
-      HDSmallIconUrl: "pkg:/images/unlink.png", 
+      Title: "Unlink this device",
+      HDSmallIconUrl: "pkg:/images/unlink.png",
   }
   if (m.subtitle_on = "on")
     s_title = "Disable subtitles"
-  else 
+  else
     s_title = "Enable subtitles"
   end if
 
   items[1] = {
       Title: s_title,
-      HDSmallIconUrl: "pkg:/images/subtitles.png", 
+      HDSmallIconUrl: "pkg:/images/subtitles.png",
   }
   screen.SetContent(items)
   screen.Show()
@@ -267,7 +267,7 @@ function InitTheme()
     buttonText       = "#C0C0C0"
     buttonHighlight  = "#ffffff"
     backgroundColor  = "#4D4D4D"
-    
+
     theme = {
         BackgroundColor: backgroundColor
         OverhangSliceHD: "pkg:/images/roku-app-overhang.png"
@@ -364,7 +364,7 @@ function FileBrowser(url as string, search_history=invalid) as Integer
               screen.SetContent(files)
             end if
           else if (c_root = "video") then
-            item = { 
+            item = {
               ContentType: "episode"
               SDPosterUrl: files[focusedItem].SDBackgroundImageUrl
               HDPosterUrl: files[focusedItem].HDBackgroundImageUrl
@@ -378,7 +378,7 @@ function FileBrowser(url as string, search_history=invalid) as Integer
               screen.SetContent(files)
             end if
           else
-            item = { 
+            item = {
               ContentType: "episode"
               SDPosterUrl: "pkg:/images/mid-file.png"
               ID: id
@@ -404,7 +404,7 @@ function FileBrowser(url as string, search_history=invalid) as Integer
         'bir item uzerinde OK butonuna basilirsa yapiacak isler burada tanimlaniyor'
         if (content_type = "application/x-directory") then
           if (files[msg.GetIndex()].size = 0) then
-            item = { 
+            item = {
               ContentType: "episode"
               SDPosterUrl: "pkg:/images/mid-folder.png"
               ID: id
@@ -424,10 +424,11 @@ function FileBrowser(url as string, search_history=invalid) as Integer
         else if (c_root = "video") then
           if (c_format = "mp4") then
             putio_api = "https://api.put.io/v2/files/"+id+"/stream?oauth_token="+m.token
-            item = { 
+            item = {
               ContentType: "episode"
               SDPosterUrl: files[msg.GetIndex()].SDBackgroundImageUrl
               HDPosterUrl: files[msg.GetIndex()].HDBackgroundImageUrl
+              Description: files[focusedItem].Description
               ID: id
               title: files[msg.GetIndex()].Title
               url: putio_api
@@ -441,8 +442,9 @@ function FileBrowser(url as string, search_history=invalid) as Integer
           else
             if (files[msg.GetIndex()].Mp4Available = true) then
               putio_api = "https://api.put.io/v2/files/"+id+"/mp4/stream?oauth_token="+m.token
-              item = { 
+              item = {
                 ContentType:"episode"
+                Description: files[focusedItem].Description
                 SDPosterUrl: files[msg.GetIndex()].SDBackgroundImageUrl
                 HDPosterUrl: files[msg.GetIndex()].HDBackgroundImageUrl
                 ID: id
@@ -457,8 +459,9 @@ function FileBrowser(url as string, search_history=invalid) as Integer
               end if
             else
               putio_api = "https://api.put.io/v2/files/"+id+"/stream?oauth_token="+m.token
-              item = { 
+              item = {
                 ContentType:"episode"
+                Description: files[focusedItem].Description
                 SDPosterUrl: files[msg.GetIndex()].SDBackgroundImageUrl
                 HDPosterUrl: files[msg.GetIndex()].SDBackgroundImageUrl
                 ID: id
@@ -475,7 +478,7 @@ function FileBrowser(url as string, search_history=invalid) as Integer
             end if
           end if
         else
-          item = { 
+          item = {
             ContentType: "episode"
             SDPosterUrl: "pkg:/images/mid-file.png"
             ID: id
@@ -487,7 +490,7 @@ function FileBrowser(url as string, search_history=invalid) as Integer
             files.delete(msg.GetIndex())
             screen.SetContent(files)
           end if
-        end if 
+        end if
       end if
     end if
   end while
@@ -515,6 +518,7 @@ function GetFileList(url as string) as object
           end if
           start_from = invalid
           for each kind in json["files"]
+            description = ""
             if (kind.content_type = "application/x-directory") then
               hd_screenshot = "pkg:/images/mid-folder.png"
               sd_screenshot = "pkg:/images/mid-folder.png"
@@ -537,20 +541,41 @@ function GetFileList(url as string) as object
                 sd_small = "pkg:/images/playable-icon.png"
                 hd_small = "pkg:/images/playable-icon.png"
                 start_from = kind.start_from
+                if kind.is_mp4_available <> Invalid
+                  mp4 = "MP4"
+                else
+                  mp4 = ""
+                end if
+
+                if kind.first_accessed_at <> Invalid
+                  accessed = "Accessed"
+                else
+                  accessed = ""
+                end if
+
+                if (mp4 <> "") AND (accessed <> "")
+                  description = mp4 + " / " + accessed
+                elseif mp4 = ""
+                  description = accessed
+                elseif accessed = ""
+                  description = mp4
+                end if
               end if
-            endif 
+            endif
 
             topic = {
               Title: kind.name,
               ID: kind.id,
               Mp4Available: kind.is_mp4_available,
               ContentType: kind.content_type,
-              SDBackgroundImageUrl: hd_screenshot, 
+              SDBackgroundImageUrl: hd_screenshot,
               HDPosterUrl: hd_screenshot,
               SDPosterUrl: sd_screenshot,
+              Description: description,
               ShortDescriptionLine1: kind.name,
-              SDSmallIconUrl: sd_small, 
-              HDSmallIconUrl: hd_small, 
+              ShortDescriptionLine2: description,
+              SDSmallIconUrl: sd_small,
+              HDSmallIconUrl: hd_small,
               size: kind.size,
               StartFrom: start_from,
             }
@@ -577,7 +602,7 @@ function SpringboardScreen(item as object) As Integer
     end if
 
     port = CreateObject("roMessagePort")
-    screen = CreateObject("roSpringboardScreen")    
+    screen = CreateObject("roSpringboardScreen")
     screen.SetMessagePort(port)
 
     screen.SetDescriptionStyle("video") 'audio, movie, video, generic
@@ -637,7 +662,7 @@ function SpringboardScreen(item as object) As Integer
             if (code = 200) then
                 subtitles = ParseJSON(msg.GetString())
                 for each subtitle in subtitles["subtitles"]
-                  if (subtitles.default = subtitle.key) 
+                  if (subtitles.default = subtitle.key)
                     screen.AddButton(3, "Subtitles")
                   endif
                 end for
@@ -668,13 +693,13 @@ function SpringboardScreen(item as object) As Integer
       msg = wait(0, screen.GetMessagePort())
       if type(msg) = "roSpringboardScreenEvent"
         if msg.isScreenClosed()
-          exit while                
+          exit while
         else if msg.isButtonPressed()
           if msg.GetIndex() = 1
             if subtitle_index = invalid
               subtitle = subtitles.default
             else if subtitle_index = 0
-              'Ayni scopeda degismis olabilir bu degisken. o yuzden tekrar ediyoruz' 
+              'Ayni scopeda degismis olabilir bu degisken. o yuzden tekrar ediyoruz'
               subtitle = invalid
             else
               subtitle = subtitles["subtitles"][subtitle_index-1]["key"]
@@ -691,7 +716,7 @@ function SpringboardScreen(item as object) As Integer
               subtitle_index = tmp
             end if
           else if msg.GetIndex() = 4
-            res = DeleteItem(item)  
+            res = DeleteItem(item)
             if (res = true) then
               return -1
             end if
@@ -784,7 +809,7 @@ function ResolveRedirect(str As String) As String
     headers = event.GetResponseHeaders()
     redirect = headers.location
     if ( redirect <> invalid AND redirect <> str )
-      str = redirect                
+      str = redirect
     endif
     'r = CreateObject("roRegex", "https://", "")'
     'str = r.ReplaceAll(str, "http://")'
@@ -819,15 +844,15 @@ function Search(history) as Integer
     screen = CreateObject("roSearchScreen")
     port = CreateObject("roMessagePort")
     screen.SetBreadcrumbText("", "Search in your files")
-    screen.SetMessagePort(port) 
+    screen.SetMessagePort(port)
     if displayHistory
         screen.SetSearchTermHeaderText("Recent Searches:")
         screen.SetSearchButtonText("Search")
         screen.SetClearButtonText("Clear history")
         screen.SetClearButtonEnabled(true) 'defaults to true'
         screen.SetSearchTerms(history)
-    endif 
-    screen.Show() 
+    endif
+    screen.Show()
     while true
         msg = wait(0, screen.GetMessagePort())
         if type(msg) = "roSearchScreenEvent"
@@ -849,9 +874,9 @@ function Search(history) as Integer
               FileBrowser(url, history)
           endif
         endif
-    end while 
+    end while
 end function
- 
+
 
 function DeleteItem(item as object) as Boolean
   l = Loading()
@@ -871,7 +896,7 @@ function DeleteItem(item as object) as Boolean
         return true
       endif
     else if (event = invalid)
-      request.AsyncCancel() 
+      request.AsyncCancel()
       l.close()
       return false
     endif
@@ -881,35 +906,35 @@ end function
 
 Sub Loading() as Object
   canvasItems = [
-        { 
+        {
             url:"pkg:/images/app-icon.png"
             TargetRect:{x:500,y:240,w:290,h:218}
         },
-        { 
+        {
             Text:"Thinking..."
             TextAttrs:{Color:"#FFED6D", Font:"Medium",
             HAlign:"HCenter", VAlign:"VCenter",
             Direction:"LeftToRight"}
             TargetRect:{x:390,y:467,w:500,h:60}
         }
-  ] 
- 
+  ]
+
   canvas = CreateObject("roImageCanvas")
   port = CreateObject("roMessagePort")
   canvas.SetMessagePort(port)
   'Set opaque background'
-  canvas.SetLayer(0, {Color:"#4D4D4D", CompositionMode:"Source"}) 
+  canvas.SetLayer(0, {Color:"#4D4D4D", CompositionMode:"Source"})
   canvas.SetRequireAllImagesToDraw(true)
   canvas.SetLayer(1, canvasItems)
   canvas.Show()
   return canvas
 end Sub
 
- 
+
 function CheckSubtitle()
   l = Loading()
   request = MakeRequest()
-  
+
   url = "https://api.put.io/v2/account/settings?oauth_token="+m.token
   port = CreateObject("roMessagePort")
   request.SetMessagePort(port)
@@ -979,9 +1004,9 @@ end function
 
 function DeleteScreen(item as object) As Integer
     port = CreateObject("roMessagePort")
-    screen = CreateObject("roSpringboardScreen")    
+    screen = CreateObject("roSpringboardScreen")
     screen.SetMessagePort(port)
-    screen.SetDescriptionStyle("video") 
+    screen.SetDescriptionStyle("video")
     screen.ClearButtons()
     screen.AddButton(1, "Delete")
     screen.SetStaticRatingEnabled(false)
@@ -995,10 +1020,10 @@ function DeleteScreen(item as object) As Integer
       msg = wait(0, screen.GetMessagePort())
       if type(msg) = "roSpringboardScreenEvent"
         if msg.isScreenClosed()
-          exit while                
+          exit while
         else if msg.isButtonPressed()
           if msg.GetIndex() = 1
-            res = DeleteItem(item)  
+            res = DeleteItem(item)
             if (res = true) then
               return -1
             end if
@@ -1011,9 +1036,9 @@ end function
 
 function SelectSubtitle(subtitles as object, screenshot)
     port = CreateObject("roMessagePort")
-    screen = CreateObject("roSpringboardScreen")    
+    screen = CreateObject("roSpringboardScreen")
     screen.SetMessagePort(port)
-    screen.SetDescriptionStyle("video") 
+    screen.SetDescriptionStyle("video")
     screen.ClearButtons()
     screen.AddButton(0, "Don't load any subtitles")
     counter = 1
@@ -1026,7 +1051,7 @@ function SelectSubtitle(subtitles as object, screenshot)
 	end if
         language = subtitle.language
       	screen.AddButton(counter, language + " "+lang_num.tostr())
-      else 
+      else
 	screen.AddButton(counter, "Unknown language")
       end if
       counter = counter + 1
@@ -1049,7 +1074,7 @@ function SelectSubtitle(subtitles as object, screenshot)
       msg = wait(0, screen.GetMessagePort())
       if type(msg) = "roSpringboardScreenEvent"
         if msg.isScreenClosed()
-          exit while                
+          exit while
         else if msg.isButtonPressed()
           subtitle_index = msg.GetIndex()
           return subtitle_index
@@ -1075,7 +1100,7 @@ function GetStartFrom(args as object)
       end if
     else if args["StartFrom"] = 0 and m.start_from <> invalid
         return m.start_from
-    else 
+    else
         return 0
     end if
 end function
